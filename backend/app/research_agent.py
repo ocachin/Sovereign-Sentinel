@@ -1,5 +1,5 @@
 """
-Research Agent: Extrae datos financieros usando Composio MCP
+Research Agent: Extracts financial data using Composio MCP
 """
 import logging
 from typing import List, Dict, Optional
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class ResearchAgent:
-    """Agent que extrae datos financieros de múltiples fuentes usando Composio."""
+    """Agent that extracts financial data from multiple sources using Composio."""
     
     def __init__(self, composio_api_key: str):
         """Initialize Research Agent with Composio client."""
@@ -33,38 +33,38 @@ class ResearchAgent:
         tenant_id: str
     ) -> List[Dict]:
         """
-        Extrae datos de préstamos desde Xero.
+        Extract loan data from Xero.
         
         Args:
-            connection_id: ID de conexión OAuth de Xero
-            tenant_id: ID del tenant de Xero
+            connection_id: Xero OAuth connection ID
+            tenant_id: Xero tenant ID
             
         Returns:
-            Lista de transacciones/contratos convertidos a formato de préstamos
+            List of transactions/contracts converted to loan format
         """
         try:
-            # Conectar con Xero usando Composio
+            # Connect to Xero using Composio
             xero_app = App.XERO
             connection = self.client.get_connection(
                 entity_id=connection_id,
                 app=xero_app
             )
             
-            # Extraer contactos (clientes) y facturas
+            # Extract contacts (clients) and invoices
             contacts = await self.toolset.execute_action(
                 action=Action.XERO_GET_CONTACTS,
                 connection=connection,
                 params={"tenant_id": tenant_id}
             )
             
-            # Extraer transacciones financieras
+            # Extract financial transactions
             transactions = await self.toolset.execute_action(
                 action=Action.XERO_GET_TRANSACTIONS,
                 connection=connection,
                 params={"tenant_id": tenant_id}
             )
             
-            # Convertir a formato LoanRecord
+            # Convert to LoanRecord format
             loans = self._convert_xero_to_loans(contacts, transactions)
             logger.info(f"Extracted {len(loans)} loans from Xero")
             return loans
@@ -79,14 +79,14 @@ class ResearchAgent:
         company_id: str
     ) -> List[Dict]:
         """
-        Extrae datos de préstamos desde QuickBooks.
+        Extract loan data from QuickBooks.
         
         Args:
-            connection_id: ID de conexión OAuth de QuickBooks
-            company_id: ID de la compañía en QuickBooks
+            connection_id: QuickBooks OAuth connection ID
+            company_id: QuickBooks company ID
             
         Returns:
-            Lista de préstamos en formato estandarizado
+            List of loans in standardized format
         """
         try:
             quickbooks_app = App.QUICKBOOKS
@@ -95,14 +95,14 @@ class ResearchAgent:
                 app=quickbooks_app
             )
             
-            # Extraer cuentas por cobrar (AR = préstamos)
+            # Extract accounts receivable (AR = loans)
             accounts_receivable = await self.toolset.execute_action(
                 action=Action.QUICKBOOKS_GET_ACCOUNTS_RECEIVABLE,
                 connection=connection,
                 params={"company_id": company_id}
             )
             
-            # Extraer transacciones de préstamos
+            # Extract loan transactions
             loans_data = await self.toolset.execute_action(
                 action=Action.QUICKBOOKS_GET_LOANS,
                 connection=connection,
@@ -122,13 +122,13 @@ class ResearchAgent:
         connection_id: str
     ) -> List[Dict]:
         """
-        Extrae datos de préstamos/financiamiento desde Stripe.
+        Extract loan/financing data from Stripe.
         
         Args:
-            connection_id: ID de conexión de Stripe
+            connection_id: Stripe connection ID
             
         Returns:
-            Lista de préstamos convertidos desde Stripe
+            List of loans converted from Stripe
         """
         try:
             stripe_app = App.STRIPE
@@ -137,13 +137,13 @@ class ResearchAgent:
                 app=stripe_app
             )
             
-            # Extraer balances y transacciones
+            # Extract balances and transactions
             balance = await self.toolset.execute_action(
                 action=Action.STRIPE_GET_BALANCE,
                 connection=connection
             )
             
-            # Extraer customer payment methods (pueden representar préstamos)
+            # Extract customer payment methods (may represent loans)
             customers = await self.toolset.execute_action(
                 action=Action.STRIPE_GET_CUSTOMERS,
                 connection=connection
@@ -158,12 +158,12 @@ class ResearchAgent:
             raise
     
     def _convert_xero_to_loans(self, contacts: List, transactions: List) -> List[Dict]:
-        """Convierte datos de Xero a formato LoanRecord."""
+        """Convert Xero data to LoanRecord format."""
         loans = []
-        # Lógica de conversión específica para Xero
-        # Mapear contactos y transacciones a préstamos
+        # Xero-specific conversion logic
+        # Map contacts and transactions to loans
         for contact in contacts:
-            # Buscar transacciones relacionadas
+            # Find related transactions
             related_transactions = [
                 t for t in transactions 
                 if t.get('contact_id') == contact.get('id')
@@ -185,9 +185,9 @@ class ResearchAgent:
         return loans
     
     def _convert_quickbooks_to_loans(self, ar_data: List, loans_data: List) -> List[Dict]:
-        """Convierte datos de QuickBooks a formato LoanRecord."""
+        """Convert QuickBooks data to LoanRecord format."""
         loans = []
-        # Lógica de conversión para QuickBooks
+        # QuickBooks conversion logic
         for loan_item in loans_data:
             loan = {
                 'loanId': f"QB_{loan_item.get('id')}",
@@ -204,10 +204,10 @@ class ResearchAgent:
         return loans
     
     def _convert_stripe_to_loans(self, customers: List, balance: Dict) -> List[Dict]:
-        """Convierte datos de Stripe a formato LoanRecord."""
+        """Convert Stripe data to LoanRecord format."""
         loans = []
-        # Stripe generalmente no maneja préstamos directamente
-        # Pero podemos mapear balances pendientes como préstamos
+        # Stripe generally doesn't handle loans directly
+        # But we can map pending balances as loans
         for customer in customers:
             if customer.get('balance', 0) > 0:
                 loan = {
@@ -217,7 +217,7 @@ class ResearchAgent:
                     'interestType': 'Cash',
                     'principalAmount': float(customer.get('balance', 0)),
                     'outstandingBalance': float(customer.get('balance', 0)),
-                    'maturityDate': datetime.now(),  # Stripe no tiene maturity dates
+                    'maturityDate': datetime.now(),  # Stripe doesn't have maturity dates
                     'covenants': []
                 }
                 loans.append(loan)
@@ -225,8 +225,8 @@ class ResearchAgent:
         return loans
     
     def _infer_interest_type(self, transaction: Dict) -> str:
-        """Infiere el tipo de interés desde los datos de transacción."""
-        # Lógica para determinar si es PIK, Cash o Hybrid
+        """Infer interest type from transaction data."""
+        # Logic to determine if it's PIK, Cash or Hybrid
         description = transaction.get('description', '').lower()
         if 'pik' in description or 'payment-in-kind' in description:
             return 'PIK'
@@ -236,7 +236,7 @@ class ResearchAgent:
             return 'Cash'
     
     def _parse_date(self, date_str: Optional[str]) -> datetime:
-        """Parsea fecha desde string."""
+        """Parse date from string."""
         if not date_str:
             return datetime.now()
         try:

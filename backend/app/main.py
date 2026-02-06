@@ -62,19 +62,13 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("COMPOSIO_API_KEY not set, Research Agent disabled")
     
-    # Initialize Financial Analysis Agent (Ollama)
+    # Initialize Financial Analysis Agent
     try:
-        financial_agent = FinancialAnalysisAgent(
-            model_name=settings.ollama_model,
-            base_url=settings.ollama_base_url
-        )
-        logger.info(f"Financial Analysis Agent initialized with {settings.ollama_model}")
+        financial_agent = FinancialAnalysisAgent()
+        logger.info("Financial Analysis Agent initialized")
     except Exception as e:
-        logger.warning(f"Financial Analysis Agent will use fallback mode: {e}")
-        financial_agent = FinancialAnalysisAgent(
-            model_name=settings.ollama_model,
-            base_url=settings.ollama_base_url
-        )
+        logger.warning(f"Failed to initialize Financial Analysis Agent: {e}")
+        financial_agent = None
     
     # Initialize Forensic Auditor
     forensic_auditor = ForensicAuditor()
@@ -205,12 +199,12 @@ async def extract_financial_data(
     tenant_id: Optional[str] = None
 ):
     """
-    Extrae datos financieros desde fuente externa usando Research Agent.
+    Extract financial data from external source using Research Agent.
     
     Args:
-        source: Fuente de datos ("xero", "quickbooks", "stripe")
-        connection_id: ID de conexión OAuth
-        tenant_id: ID del tenant (requerido para Xero y QuickBooks)
+        source: Data source ("xero", "quickbooks", "stripe")
+        connection_id: OAuth connection ID
+        tenant_id: Tenant ID (required for Xero and QuickBooks)
     """
     if not research_agent:
         raise HTTPException(
@@ -251,17 +245,17 @@ async def analyze_portfolio(
     use_ai: bool = True
 ):
     """
-    Analiza portafolio de préstamos usando Financial Analysis Agent o Forensic Auditor.
+    Analyze loan portfolio using Financial Analysis Agent or Forensic Auditor.
     
     Args:
-        loans: Lista de préstamos a analizar
-        use_ai: Si True, usa Financial Analysis Agent (Ollama), si False usa Forensic Auditor tradicional
+        loans: List of loans to analyze
+        use_ai: If True, uses Financial Analysis Agent, if False uses traditional Forensic Auditor
     """
     if not financial_agent:
         raise HTTPException(status_code=503, detail="Financial Analysis Agent not initialized")
     
     try:
-        # Obtener contexto de riesgo actual
+        # Get current risk context
         latest_assessment = osint_scout.get_latest_assessment() if osint_scout else None
         risk_context = {
             "global_risk_score": latest_assessment.global_risk_score if latest_assessment else 0,
@@ -271,7 +265,7 @@ async def analyze_portfolio(
         }
         
         if use_ai and financial_agent:
-            # Usar Financial Analysis Agent con modelo open source
+            # Usar Financial Analysis Agent
             flagged = await financial_agent.analyze_portfolio(loans, risk_context)
         else:
             # Usar Forensic Auditor tradicional
@@ -303,19 +297,19 @@ async def extract_and_analyze(
     use_ai: bool = True
 ):
     """
-    Endpoint combinado: extrae datos y los analiza en un solo paso.
+    Combined endpoint: extracts data and analyzes it in a single step.
     
     Args:
-        source: Fuente de datos ("xero", "quickbooks", "stripe")
-        connection_id: ID de conexión OAuth
-        tenant_id: ID del tenant (requerido para Xero y QuickBooks)
-        use_ai: Si True, usa Financial Analysis Agent, si False usa Forensic Auditor
+        source: Data source ("xero", "quickbooks", "stripe")
+        connection_id: OAuth connection ID
+        tenant_id: Tenant ID (required for Xero and QuickBooks)
+        use_ai: If True, uses Financial Analysis Agent, if False uses Forensic Auditor
     """
     if not research_agent:
         raise HTTPException(status_code=503, detail="Research Agent not initialized")
     
     try:
-        # Extraer datos
+        # Extract data
         if source == "xero":
             if not tenant_id:
                 raise HTTPException(400, "tenant_id required for Xero")
@@ -332,7 +326,7 @@ async def extract_and_analyze(
         # Convertir a LoanRecord objects
         loans = [LoanRecord(**loan) for loan in loans_data]
         
-        # Analizar
+        # Analyze
         latest_assessment = osint_scout.get_latest_assessment() if osint_scout else None
         risk_context = {
             "global_risk_score": latest_assessment.global_risk_score if latest_assessment else 0,

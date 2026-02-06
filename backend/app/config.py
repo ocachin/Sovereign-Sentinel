@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     # API Keys
     you_api_key: str
     openai_api_key: str
-    composio_api_key: Optional[str] = None  # Nuevo
+    composio_api_key: Optional[str] = None  # New
     
     # Application Settings
     environment: str = "development"
@@ -23,10 +23,6 @@ class Settings(BaseSettings):
     
     # Risk Score Settings
     risk_threshold: int = 70
-    
-    # Ollama Settings (para modelo open source)
-    ollama_model: str = "llama2"  # o "mistral", "llama2:13b", etc.
-    ollama_base_url: str = "http://localhost:11434"
     
     class Config:
         env_file = ".env"

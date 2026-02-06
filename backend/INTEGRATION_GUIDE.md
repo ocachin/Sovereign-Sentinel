@@ -1,61 +1,44 @@
-# Guía de Integración: Research Agent y Financial Analysis Agent
+# Integration Guide: Research Agent and Financial Analysis Agent
 
-## Resumen
+## Summary
 
-Se han agregado dos nuevos agentes al sistema Sovereign Sentinel:
+Two new agents have been added to the Sovereign Sentinel system:
 
-1. **Research Agent**: Extrae datos financieros de Xero, QuickBooks y Stripe usando Composio MCP
-2. **Financial Analysis Agent**: Analiza préstamos usando modelos open source (Ollama/LLaMA 2)
+1. **Research Agent**: Extracts financial data from Xero, QuickBooks, and Stripe using Composio MCP
+2. **Financial Analysis Agent**: Analyzes loans using rules and risk-based heuristics
 
-## Configuración
+## Configuration
 
-### 1. Variables de Entorno
+### 1. Environment Variables
 
-Agrega a tu archivo `.env`:
+Add to your `.env` file:
 
 ```bash
-# Composio API Key (obtener en https://composio.dev)
+# Composio API Key (get from https://composio.dev)
 COMPOSIO_API_KEY=your_composio_api_key_here
-
-# Ollama Settings (opcional, defaults aplicados)
-OLLAMA_MODEL=llama2
-OLLAMA_BASE_URL=http://localhost:11434
 ```
 
-### 2. Instalar Dependencias
+### 2. Install Dependencies
 
 ```bash
 cd backend
 pip install -r requirements.txt
 ```
 
-### 3. Instalar Ollama (para Financial Analysis Agent)
+## New API Endpoints
 
-Ver `SETUP_OLLAMA.md` para instrucciones detalladas.
-
-Resumen rápido:
-```bash
-# macOS/Linux
-curl -fsSL https://ollama.ai/install.sh | sh
-
-# Descargar modelo
-ollama pull llama2
-```
-
-## Nuevos Endpoints API
-
-### 1. Extraer Datos Financieros
+### 1. Extract Financial Data
 
 **POST** `/api/research/extract`
 
-Extrae datos de préstamos desde una fuente externa.
+Extracts loan data from an external source.
 
 **Body (JSON):**
 ```json
 {
   "source": "xero",  // "xero" | "quickbooks" | "stripe"
   "connection_id": "conn_123",
-  "tenant_id": "tenant_456"  // Requerido para Xero y QuickBooks
+  "tenant_id": "tenant_456"  // Required for Xero and QuickBooks
 }
 ```
 
@@ -80,11 +63,11 @@ Extrae datos de préstamos desde una fuente externa.
 }
 ```
 
-### 2. Analizar Portafolio
+### 2. Analyze Portfolio
 
 **POST** `/api/analysis/analyze`
 
-Analiza un portafolio de préstamos usando AI o método tradicional.
+Analyzes a loan portfolio using Financial Analysis Agent or traditional method.
 
 **Body (JSON):**
 ```json
@@ -101,7 +84,7 @@ Analiza un portafolio de préstamos usando AI o método tradicional.
       "covenants": []
     }
   ],
-  "use_ai": true  // true = usa Ollama, false = usa Forensic Auditor tradicional
+  "use_ai": true  // true = uses Financial Analysis Agent, false = uses traditional Forensic Auditor
 }
 ```
 
@@ -124,11 +107,11 @@ Analiza un portafolio de préstamos usando AI o método tradicional.
 }
 ```
 
-### 3. Extraer y Analizar (Combinado)
+### 3. Extract and Analyze (Combined)
 
 **POST** `/api/research/analyze-and-extract`
 
-Extrae datos y los analiza en un solo paso.
+Extracts data and analyzes it in a single step.
 
 **Body (JSON):**
 ```json
@@ -151,14 +134,14 @@ Extrae datos y los analiza en un solo paso.
 }
 ```
 
-## Flujo de Trabajo Recomendado
+## Recommended Workflow
 
-### Opción 1: Extracción y Análisis Separados
+### Option 1: Separate Extraction and Analysis
 
 ```python
 import requests
 
-# 1. Extraer datos
+# 1. Extract data
 response = requests.post(
     "http://localhost:8000/api/research/extract",
     json={
@@ -169,7 +152,7 @@ response = requests.post(
 )
 loans_data = response.json()["loans"]
 
-# 2. Analizar
+# 2. Analyze
 analysis_response = requests.post(
     "http://localhost:8000/api/analysis/analyze",
     json={
@@ -180,7 +163,7 @@ analysis_response = requests.post(
 flagged = analysis_response.json()["flagged_loans"]
 ```
 
-### Opción 2: Todo en Uno
+### Option 2: All in One
 
 ```python
 import requests
@@ -197,23 +180,23 @@ response = requests.post(
 results = response.json()
 ```
 
-## Configuración de Composio
+## Composio Configuration
 
-### 1. Obtener API Key
+### 1. Get API Key
 
-1. Registrarse en https://composio.dev
-2. Obtener API key desde el dashboard
-3. Agregar a `.env`: `COMPOSIO_API_KEY=your_key`
+1. Sign up at https://composio.dev
+2. Get API key from dashboard
+3. Add to `.env`: `COMPOSIO_API_KEY=your_key`
 
-### 2. Conectar Aplicaciones
+### 2. Connect Applications
 
-Para conectar Xero, QuickBooks o Stripe:
+To connect Xero, QuickBooks, or Stripe:
 
-1. Usar el SDK de Composio para crear conexiones OAuth
-2. O usar el dashboard de Composio para conectar manualmente
-3. Obtener `connection_id` después de conectar
+1. Use Composio SDK to create OAuth connections
+2. Or use Composio dashboard to connect manually
+3. Get `connection_id` after connecting
 
-**Ejemplo de conexión (usando Composio SDK):**
+**Connection example (using Composio SDK):**
 ```python
 from composio import ComposioClient
 
@@ -228,27 +211,21 @@ connection_id = connection.id
 ## Troubleshooting
 
 ### Error: "Research Agent not initialized"
-- Verifica que `COMPOSIO_API_KEY` esté en `.env`
-- Reinicia el servidor después de agregar la variable
-
-### Error: "Failed to initialize Ollama"
-- Verifica que Ollama esté corriendo: `ollama list`
-- Verifica que el modelo esté descargado: `ollama pull llama2`
-- Verifica `OLLAMA_BASE_URL` en `.env`
+- Verify that `COMPOSIO_API_KEY` is in `.env`
+- Restart server after adding the variable
 
 ### Error: "Composio is not installed"
 ```bash
 pip install composio-core
 ```
 
-### Error: "LangChain not available"
-```bash
-pip install langchain langchain-community
-```
+### Error: "Financial Analysis Agent not initialized"
+- Check server logs for specific error
+- Agent should initialize automatically on server start
 
-## Notas
+## Notes
 
-- El Research Agent requiere conexiones OAuth activas para cada fuente
-- El Financial Analysis Agent usa fallback si Ollama no está disponible
-- Los análisis con AI pueden ser más lentos que el método tradicional
-- Para producción, considera usar un servidor Ollama dedicado
+- Research Agent requires active OAuth connections for each source
+- Financial Analysis Agent uses rule-based analysis and heuristics
+- Analysis is fast and doesn't require external models
+- Agent considers multiple factors: interest type, balance, global risk, affected sectors
